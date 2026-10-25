@@ -1,0 +1,13 @@
+[package]
+name = "quinn-router"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-router = "0.5"
+bytes = "1"
+h3 = "0.0.8"
+h3-quinn = "0.0.10"
+http = "1"
+quinn-macros = { path = "../quinn-macros" }
+tracing = "0.1"

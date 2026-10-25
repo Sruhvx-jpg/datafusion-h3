@@ -1,0 +1,18 @@
+[package]
+name = "gateway"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.54.1", features = ["full"] }
+quinn = "0.11"
+h3 = "0.0.8"
+h3-quinn = "0.0.10"
+bytes = "1"
+http = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+server-conf = { path = "../../packages/server-conf" }
+lb = { path = "../../packages/lb" }
+quinn-router = { path = "../../packages/quinn-router" }
