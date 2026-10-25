@@ -69,7 +69,7 @@ pub fn create_server_config(env: &ServerEnv) -> Result<ServerConfig, ConfigError
 
 /// Generates an ephemeral in-memory self-signed certificate for local development
 fn generate_dev_certs() -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), ConfigError> {
-    let cert = rcgen::generate_simple_self_signed(vec!["localhost".into()])?;
+    let cert = rcgen::generate_simple_self_signed(vec!["localhost".into(), "127.0.0.1".into()])?;
     let cert_der = CertificateDer::from(cert.cert.der().to_vec());
     let key_der = PrivateKeyDer::Pkcs8(cert.key_pair.serialize_der().into());
     Ok((vec![cert_der], key_der))
