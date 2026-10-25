@@ -34,7 +34,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let conn = match incoming.await {
                 Ok(conn) => conn,
                 Err(err) => {
-                    tracing::warn!("QUIC handshake failed: {err}");
+                    match &err {
+                        quinn::ConnectionError::ApplicationClosed(app) => {
+                            tracing::warn!("QUIC ApplicationClosed: code=0x{:x} ({}), reason={:?}", app.error_code.into_inner(), app.error_code, app.reason);
+                        }
+                        _ => {
+                            tracing::warn!("QUIC handshake failed: {err:?}");
+                        }
+                    }
                     return;
                 }
             };

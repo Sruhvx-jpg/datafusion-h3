@@ -1,9 +1,11 @@
 use std::future::Future;
 use std::sync::Arc;
 use actix_router::ResourceDef;
-use http::{Method, Request};
+use http::Method;
 use crate::internal::config::{HttpServiceFactory, ServiceConfig};
-use crate::internal::types::{H3Stream, HandlerFn};
+use crate::internal::request::HttpRequest;
+use crate::internal::response::IntoHttpResponse;
+use crate::internal::types::HandlerFn;
 
 #[derive(Clone)]
 pub struct HandlerEntry {
@@ -33,12 +35,20 @@ impl HttpServiceFactory for Route {
 // Macro to generate all standard HTTP method constructors
 macro_rules! define_method {
     ($fn_name:ident, $method:ident) => {
-        pub fn $fn_name<F, Fut>(path: &str, f: F) -> Route
+        pub fn $fn_name<F, Fut, R>(path: &str, f: F) -> Route
         where
-            F: Fn(Request<()>, H3Stream) -> Fut + Send + Sync + 'static,
-            Fut: Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'static,
+            F: Fn(&mut HttpRequest) -> Fut + Send + Sync + 'static,
+            Fut: Future<Output = R> + Send + 'static,
+            R: IntoHttpResponse + 'static,
         {
-            let handler: HandlerFn = Arc::new(move |req, stream| Box::pin(f(req, stream)));
+            let handler: HandlerFn = Arc::new(move |mut req| {
+                let fut = f(&mut req);
+                Box::pin(async move {
+                    let outcome = fut.await;
+                    let stream = req.into_stream();
+                    (outcome.into_http_response(), stream)
+                })
+            });
             Route {
                 path: path.to_string(),
                 entry: HandlerEntry {

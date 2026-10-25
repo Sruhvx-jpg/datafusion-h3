@@ -8,6 +8,9 @@ pub mod router;
 pub use internal::{
     app::App,
     config::{HttpServiceFactory, ServiceConfig},
+    error::ApiError,
+    request::HttpRequest,
+    response::{HttpResponse, HttpResponseBuilder, IntoHttpResponse},
     route::{HandlerEntry, Route},
     scope::{web, Scope},
     service::Router,

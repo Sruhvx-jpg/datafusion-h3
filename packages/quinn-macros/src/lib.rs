@@ -22,8 +22,13 @@ macro_rules! method_macro {
                         config.register_route(
                             #path,
                             http::Method::$method_ident,
-                            std::sync::Arc::new(|req, stream| {
-                                Box::pin(#fn_name(req, stream))
+                            std::sync::Arc::new(|mut req| {
+                                Box::pin(async move {
+                                    let outcome = #fn_name(&mut req).await;
+                                    let stream = req.into_stream();
+                                    let res = quinn_router::IntoHttpResponse::into_http_response(outcome);
+                                    (res, stream)
+                                })
                             }),
                         );
                     }

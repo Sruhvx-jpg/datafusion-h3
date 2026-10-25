@@ -10,4 +10,7 @@ h3 = "0.0.8"
 h3-quinn = "0.0.10"
 http = "1"
 quinn-macros = { path = "../quinn-macros" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 tracing = "0.1"
+validator = { version = "0.19", features = ["derive"] }
