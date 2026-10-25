@@ -15,9 +15,6 @@ pub enum ConfigError {
     #[error("TLS error: {0}")]
     Tls(#[from] rustls::Error),
 
-    #[error("Certificate generation error: {0}")]
-    CertGen(#[from] rcgen::Error),
-
     #[error("QUIC crypto error: {0}")]
     QuicCrypto(String),
 
@@ -26,15 +23,24 @@ pub enum ConfigError {
 }
 
 pub fn create_server_config(env: &ServerEnv) -> Result<ServerConfig, ConfigError> {
-    // 1. Resolve TLS certificates (Disk files in Prod, in-memory self-signed in Dev)
-    let (certs, key) = match env.app_env {
-        AppEnv::Production => {
-            let cert_path = env.tls_cert_path.as_deref().expect("Validated by ServerEnv");
-            let key_path = env.tls_key_path.as_deref().expect("Validated by ServerEnv");
-            load_prod_certs(cert_path, key_path)?
+    // 1. Resolve TLS certificates:
+    //    Requires real certificates (mkcert for local dev, Let's Encrypt for prod).
+    //    Fails fast with explicit mkcert instructions if cert paths are omitted.
+    let (cert_path, key_path) = match (env.tls_cert_path.as_deref(), env.tls_key_path.as_deref()) {
+        (Some(c), Some(k)) => (c, k),
+        _ => {
+            return Err(ConfigError::Invalid(
+                "❌ Missing TLS certificates! Browsers strictly reject raw self-signed certs over QUIC (TLS Alert 42).\n\
+                 👉 Instructions for local dev:\n\
+                    1. Generate certs: mkcert -cert-file cert.pem -key-file key.pem localhost 127.0.0.1\n\
+                    2. In .env, set:\n\
+                       TLS_CERT_PATH=/path/to/cert.pem\n\
+                       TLS_KEY_PATH=/path/to/key.pem".to_string(),
+            ));
         }
-        AppEnv::Development => generate_dev_certs()?,
     };
+
+    let (certs, key) = load_certs(cert_path, key_path)?;
 
     // 2. Build Rustls TLS 1.3 server config
     let mut tls_config = rustls::ServerConfig::builder()
@@ -46,14 +52,14 @@ pub fn create_server_config(env: &ServerEnv) -> Result<ServerConfig, ConfigError
 
     // 3. QUIC Transport Tuning from environment:
     let mut transport = TransportConfig::default();
-    
+
     // Drop dead connections if no packet arrives within idle_timeout_secs (reclaims RAM)
     transport.max_idle_timeout(Some(
         Duration::from_secs(env.idle_timeout_secs)
             .try_into()
-            .map_err(|e: quinn::VarIntBoundsExceeded| ConfigError::Invalid(e.to_string()))?
+            .map_err(|e: quinn::VarIntBoundsExceeded| ConfigError::Invalid(e.to_string()))?,
     ));
-    
+
     // Keep NAT firewall punch-holes open every keep_alive_interval_secs (prevents router drops)
     transport.keep_alive_interval(Some(Duration::from_secs(env.keep_alive_interval_secs)));
 
@@ -67,20 +73,12 @@ pub fn create_server_config(env: &ServerEnv) -> Result<ServerConfig, ConfigError
     Ok(server_config)
 }
 
-/// Generates an ephemeral in-memory self-signed certificate for local development
-fn generate_dev_certs() -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), ConfigError> {
-    let cert = rcgen::generate_simple_self_signed(vec!["localhost".into(), "127.0.0.1".into()])?;
-    let cert_der = CertificateDer::from(cert.cert.der().to_vec());
-    let key_der = PrivateKeyDer::Pkcs8(cert.key_pair.serialize_der().into());
-    Ok((vec![cert_der], key_der))
-}
-
 /// Reads real PEM-encoded certificate chain and PKCS8/RSA private key from disk
-fn load_prod_certs(
+fn load_certs(
     cert_path: &str,
     key_path: &str,
 ) -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), ConfigError> {
-    // 1. Read Certificate Chain (e.g. fullchain.pem)
+    // 1. Read Certificate Chain (e.g. mkcert cert.pem or fullchain.pem)
     let cert_file = File::open(cert_path)?;
     let mut cert_reader = BufReader::new(cert_file);
     let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut cert_reader)

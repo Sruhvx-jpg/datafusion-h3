@@ -2748,7 +2748,6 @@ name = "server-conf"
 version = "0.1.0"
 dependencies = [
  "quinn",
- "rcgen",
  "rustls",
  "rustls-pemfile",
  "rustls-pki-types",
