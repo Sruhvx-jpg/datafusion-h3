@@ -59,6 +59,7 @@ pub fn validate_filename(filename: &str) -> bool {
 pub struct UploadMetadata {
     pub status: String,
     pub filename: String,
+    pub file_path: String,
     pub total_bytes: u64,
     pub total_chunks: usize,
     pub duplicate_chunks: usize,
@@ -195,10 +196,13 @@ pub async fn upload_table(req: &mut HttpRequest) -> HttpResponse {
     }
 
     let blake3_hash = running_hasher.finalize().to_hex().to_string();
+    let bucket = std::env::var("S3_BUCKET").unwrap_or_else(|_| "service4agent".to_string());
+    let file_path = format!("s3://{}/tables/{}", bucket, filename);
 
     let meta = UploadMetadata {
         status: "success".to_string(),
         filename,
+        file_path,
         total_bytes,
         total_chunks,
         duplicate_chunks,
