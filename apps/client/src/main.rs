@@ -21,7 +21,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     endpoint.set_default_client_config(client_config);
 
     // 3. Connect to specified port or default to Gateway 4430
-    let port = std::env::args().nth(1).unwrap_or_else(|| "4430".to_string());
+    let args: Vec<String> = std::env::args().collect();
+    let port = args.get(1).map(|s| s.as_str()).unwrap_or("4430");
+    let method = args.get(2).map(|s| s.as_str()).unwrap_or("GET");
+    let path = args.get(3).map(|s| s.as_str()).unwrap_or("/api/v0/health");
+    let payload_file = args.get(4).map(|s| s.as_str());
+
     let target_addr: SocketAddr = format!("127.0.0.1:{}", port).parse()?;
     println!("Connecting to HTTP/3 at https://{}...", target_addr);
 
@@ -33,14 +38,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = driver.wait_idle().await;
     });
 
-    // 4. Send GET /api/v0/health request
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("https://localhost:{}/api/v0/health", port))
-        .body(())?;
+    // 4. Send HTTP/3 request
+    let uri = format!("https://localhost:{}{}", port, path);
+    println!("Sending {} {}...", method, uri);
 
-    println!("Sending GET /api/v0/health...");
+    let mut req_builder = Request::builder()
+        .method(method)
+        .uri(&uri);
+
+    let body_bytes = if method == "PUT" || method == "POST" {
+        req_builder = req_builder.header("content-type", "text/csv");
+        if let Some(filepath) = payload_file {
+            tokio::fs::read(filepath).await?
+        } else {
+            b"id,name,value\n1,alpha,10.5\n2,beta,20.0\n3,gamma,30.5\n".to_vec()
+        }
+    } else {
+        Vec::new()
+    };
+
+    let req = req_builder.body(())?;
     let mut stream = send_request.send_request(req).await?;
+
+    if !body_bytes.is_empty() {
+        // Stream in chunks
+        for chunk in body_bytes.chunks(1024 * 64) {
+            stream.send_data(bytes::Bytes::copy_from_slice(chunk)).await?;
+        }
+    }
     stream.finish().await?;
 
     // 5. Read HTTP/3 Response

@@ -2,8 +2,7 @@ use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use bytes::Bytes;
-use http::{Request, Response, StatusCode};
+use http::Request;
 use quinn_router::H3Stream;
 
 /// Represents one of the backend engines in the showdown
@@ -18,6 +17,7 @@ pub struct BackendTarget {
 pub struct LoadBalancer {
     backends: Arc<Vec<BackendTarget>>,
     counter: Arc<AtomicUsize>,
+    router: quinn_router::Router,
 }
 
 impl LoadBalancer {
@@ -26,6 +26,7 @@ impl LoadBalancer {
         Self {
             backends: Arc::new(backends),
             counter: Arc::new(AtomicUsize::new(0)),
+            router: quinn_router::api_v0(),
         }
     }
 
@@ -39,7 +40,7 @@ impl LoadBalancer {
     pub async fn dispatch(
         &self,
         req: Request<()>,
-        mut client_stream: H3Stream,
+        client_stream: H3Stream,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 1. Pick backend (alternates strictly 50/50)
         let target = self.select_backend();
@@ -51,21 +52,8 @@ impl LoadBalancer {
             "⚡ [50/50 LB] Routed request"
         );
 
-        // 2. Build response tagging which engine served the request
-        let resp = Response::builder()
-            .status(StatusCode::OK)
-            .header("content-type", "application/json")
-            .header("x-served-by", target.name)
-            .body(())?;
-
-        client_stream.send_response(resp).await?;
-
-        let payload = format!(
-            r#"{{"status":"ok","backend":"{}","addr":"{}"}}"#,
-            target.name, target.addr
-        );
-        client_stream.send_data(Bytes::from(payload)).await?;
-        client_stream.finish().await?;
+        // 2. Dispatch to backend router engine
+        self.router.dispatch(req, client_stream).await;
 
         Ok(())
     }

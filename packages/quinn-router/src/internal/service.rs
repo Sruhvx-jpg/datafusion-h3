@@ -27,7 +27,7 @@ impl Router {
         // 1. Actix-router Trie recognition
         if let Some((handler, _id)) = self.actix_router.recognize(&mut path) {
             if handler.method == method {
-                let http_req = HttpRequest::new(req, stream);
+                let http_req = HttpRequest::new(req, stream, path);
 
                 // Execute handler
                 let (outcome, mut stream) = (handler.func)(http_req).await;

@@ -1,5 +1,6 @@
 use crate::internal::{web, App, ServiceConfig};
 use crate::handlers::health::health_check;
+use crate::handlers::upload::upload_table;
 use crate::Router;
 
 /// Central entry point for the /api/v0 router.
@@ -15,7 +16,6 @@ pub fn mount_api_v0(cfg: &mut ServiceConfig) {
     cfg.service(
         web::scope("/api/v0")
             .service(health_check) // Plugs in #[get("/health")] macro service
-            // Future child routes plug in right here:
-            // .service(query_handler)
+            .service(upload_table) // Plugs in #[put("/tables/{filename}")] macro service
     );
 }

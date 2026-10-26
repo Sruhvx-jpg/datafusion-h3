@@ -9,14 +9,16 @@ use crate::internal::types::H3Stream;
 pub struct HttpRequest {
     pub(crate) req: Request<()>,
     pub(crate) stream: H3Stream,
+    pub(crate) path: actix_router::Path<String>,
     pub(crate) body_buffer: Option<Bytes>,
 }
 
 impl HttpRequest {
-    pub fn new(req: Request<()>, stream: H3Stream) -> Self {
+    pub fn new(req: Request<()>, stream: H3Stream, path: actix_router::Path<String>) -> Self {
         Self {
             req,
             stream,
+            path,
             body_buffer: None,
         }
     }
@@ -33,6 +35,26 @@ impl HttpRequest {
         self.req.headers()
     }
 
+    pub fn match_info(&self) -> &actix_router::Path<String> {
+        &self.path
+    }
+
+    pub fn path_param(&self, name: &str) -> Option<&str> {
+        self.path.get(name)
+    }
+
+    /// Receives the next data chunk from the HTTP/3 stream
+    pub async fn recv_chunk(&mut self) -> Result<Option<Bytes>, ApiError> {
+        match self.stream.recv_data().await {
+            Ok(Some(mut chunk)) => {
+                let bytes = chunk.copy_to_bytes(chunk.remaining());
+                Ok(Some(bytes))
+            }
+            Ok(None) => Ok(None),
+            Err(e) => Err(ApiError::internal(format!("Stream receive error: {e}"))),
+        }
+    }
+
     /// Reads raw body bytes from the underlying HTTP/3 stream
     pub async fn read_body(&mut self) -> Result<Bytes, ApiError> {
         if let Some(ref b) = self.body_buffer {
@@ -40,12 +62,8 @@ impl HttpRequest {
         }
 
         let mut body = BytesMut::new();
-        while let Ok(Some(mut chunk)) = self.stream.recv_data().await {
-            while chunk.has_remaining() {
-                let bytes = chunk.chunk();
-                body.extend_from_slice(bytes);
-                chunk.advance(bytes.len());
-            }
+        while let Some(chunk) = self.recv_chunk().await? {
+            body.extend_from_slice(&chunk);
         }
 
         let bytes = body.freeze();

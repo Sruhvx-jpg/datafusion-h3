@@ -82,6 +82,8 @@ impl HttpResponse {
     #[allow(non_snake_case)]
     pub fn NotFound() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::NOT_FOUND) }
     #[allow(non_snake_case)]
+    pub fn UnsupportedMediaType() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::UNSUPPORTED_MEDIA_TYPE) }
+    #[allow(non_snake_case)]
     pub fn InternalServerError() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR) }
 
     pub fn into_inner(self) -> Response<Bytes> {
