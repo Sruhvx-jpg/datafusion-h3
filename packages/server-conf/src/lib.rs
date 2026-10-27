@@ -7,6 +7,7 @@ use quinn::{ServerConfig, TransportConfig};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 pub use utils::{AppEnv, ServerEnv};
 
+#[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
     #[error("I/O error: {0}")]

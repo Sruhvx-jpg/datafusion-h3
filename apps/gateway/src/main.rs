@@ -24,10 +24,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 3. Initialize Load Balancer targeting the backends
     let lb = LoadBalancer::new(vec![
-        BackendTarget {
-            name: "quinn",
-            addr: format!("{}:{}", env.host, env.port).parse()?, // 127.0.0.1:4433
-        },
+        BackendTarget::new(
+            "quinn",
+            format!("{}:{}", env.host, env.port).parse()?, // 127.0.0.1:4433
+        ),
     ]);
 
     tracing::info!(target: "gateway", "🌐 [Gateway LB] Listening on UDP https://{}", gateway_addr);

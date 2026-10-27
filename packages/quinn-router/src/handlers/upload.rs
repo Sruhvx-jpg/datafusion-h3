@@ -4,7 +4,7 @@ use object_store::buffered::BufWriter;
 use object_store::path::Path as ObjectPath;
 use object_store::ObjectStore;
 use quinn_macros::put;
-use quinn_router::{HttpRequest, HttpResponse};
+use quinn_router::{ApiError, HttpRequest, HttpResponse};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::sync::{Arc, OnceLock};
@@ -55,11 +55,56 @@ pub fn validate_filename(filename: &str) -> bool {
     true
 }
 
+/// Strong newtype wrapper around validated CSV table filenames
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+pub struct TableName(pub String);
+
+impl TableName {
+    pub fn new(raw: impl Into<String>) -> Result<Self, ApiError> {
+        let name = raw.into();
+        if !validate_filename(&name) {
+            return Err(ApiError::bad_request("Only .csv files are supported"));
+        }
+        Ok(Self(name))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for TableName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Strong newtype wrapper around canonical S3 storage URIs
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+pub struct S3Uri(pub String);
+
+impl S3Uri {
+    pub fn new(raw: impl Into<String>) -> Self {
+        Self(raw.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for S3Uri {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[non_exhaustive]
 #[derive(Debug, Serialize)]
 pub struct UploadMetadata {
     pub status: String,
-    pub filename: String,
-    pub file_path: String,
+    pub filename: TableName,
+    pub file_path: S3Uri,
     pub total_bytes: u64,
     pub total_chunks: usize,
     pub duplicate_chunks: usize,
@@ -70,8 +115,8 @@ pub struct UploadMetadata {
 /// Leaf Handler: Streaming PUT CSV upload using battle-tested BufWriter
 #[put("/tables/{filename}")]
 pub async fn upload_table(req: &mut HttpRequest) -> HttpResponse {
-    // 1. Filename validation
-    let filename = match req.path_param("filename") {
+    // 1. Filename validation and newtype wrapping
+    let raw_filename = match req.path_param("filename") {
         Some(f) if !f.is_empty() => f.to_string(),
         _ => {
             let path = req.uri().path();
@@ -79,12 +124,15 @@ pub async fn upload_table(req: &mut HttpRequest) -> HttpResponse {
         }
     };
 
-    if !validate_filename(&filename) {
-        return HttpResponse::BadRequest().json(serde_json::json!({
-            "error": "Only .csv files are supported",
-            "status": 400
-        }));
-    }
+    let table_name = match TableName::new(&raw_filename) {
+        Ok(t) => t,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "Only .csv files are supported",
+                "status": 400
+            }));
+        }
+    };
 
     // 2. Content-Type validation
     if let Some(ct_header) = req.headers().get(header::CONTENT_TYPE) {
@@ -108,7 +156,7 @@ pub async fn upload_table(req: &mut HttpRequest) -> HttpResponse {
     }
 
     // 3. Location and Crate-Provided BufWriter Setup
-    let location = match ObjectPath::parse(format!("tables/{}", filename)) {
+    let location = match ObjectPath::parse(format!("tables/{}", table_name)) {
         Ok(p) => p,
         Err(e) => {
             return HttpResponse::BadRequest().json(serde_json::json!({
@@ -197,11 +245,11 @@ pub async fn upload_table(req: &mut HttpRequest) -> HttpResponse {
 
     let blake3_hash = running_hasher.finalize().to_hex().to_string();
     let bucket = std::env::var("S3_BUCKET").unwrap_or_else(|_| "service4agent".to_string());
-    let file_path = format!("s3://{}/tables/{}", bucket, filename);
+    let file_path = S3Uri::new(format!("s3://{}/tables/{}", bucket, table_name));
 
     let meta = UploadMetadata {
         status: "success".to_string(),
-        filename,
+        filename: table_name,
         file_path,
         total_bytes,
         total_chunks,
@@ -242,5 +290,23 @@ mod tests {
     fn test_object_path_parse() {
         assert!(ObjectPath::parse("tables/valid.csv").is_ok());
         assert!(ObjectPath::parse("tables/../invalid.csv").is_err());
+    }
+
+    #[test]
+    fn test_table_name_and_s3_uri_newtypes() {
+        let table = TableName::new("metrics_2024.csv").expect("valid table name");
+        assert_eq!(table.as_str(), "metrics_2024.csv");
+        assert_eq!(format!("{table}"), "metrics_2024.csv");
+
+        let invalid = TableName::new("../traversal.csv");
+        assert!(invalid.is_err());
+
+        let uri = S3Uri::new("s3://bucket/tables/metrics_2024.csv");
+        assert_eq!(uri.as_str(), "s3://bucket/tables/metrics_2024.csv");
+        assert_eq!(format!("{uri}"), "s3://bucket/tables/metrics_2024.csv");
+
+        // Verify JSON serialization maintains string representation
+        let json = serde_json::to_string(&table).expect("serializable");
+        assert_eq!(json, "\"metrics_2024.csv\"");
     }
 }

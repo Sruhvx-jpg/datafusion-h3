@@ -6,16 +6,23 @@ use http::Request;
 use quinn_router::H3Stream;
 
 /// Represents one of the backend engines in the showdown
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct BackendTarget {
     pub name: &'static str,
     pub addr: SocketAddr,
 }
 
+impl BackendTarget {
+    pub fn new(name: &'static str, addr: SocketAddr) -> Self {
+        Self { name, addr }
+    }
+}
+
 /// Lock-free 50/50 Round-Robin Load Balancer
 #[derive(Clone)]
 pub struct LoadBalancer {
-    backends: Arc<Vec<BackendTarget>>,
+    backends: Arc<[BackendTarget]>,
     counter: Arc<AtomicUsize>,
     router: quinn_router::Router,
 }
@@ -24,7 +31,7 @@ impl LoadBalancer {
     pub fn new(backends: Vec<BackendTarget>) -> Self {
         assert!(!backends.is_empty(), "Load balancer requires at least 1 backend target");
         Self {
-            backends: Arc::new(backends),
+            backends: backends.into(),
             counter: Arc::new(AtomicUsize::new(0)),
             router: quinn_router::api_v0(),
         }

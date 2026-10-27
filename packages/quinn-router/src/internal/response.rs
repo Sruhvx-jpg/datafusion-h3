@@ -8,6 +8,7 @@ pub trait IntoHttpResponse {
 }
 
 /// An HTTP response builder mimicking actix_web::HttpResponseBuilder
+#[must_use = "an HttpResponseBuilder does nothing unless .body(), .json(), or .finish() is called"]
 pub struct HttpResponseBuilder {
     status: StatusCode,
     headers: Vec<(HeaderName, HeaderValue)>,
@@ -45,7 +46,7 @@ impl HttpResponseBuilder {
         for (k, v) in &self.headers {
             builder = builder.header(k, v);
         }
-        let resp = builder.body(body.into()).unwrap();
+        let resp = builder.body(body.into()).expect("static response builder invariants guaranteed valid");
         HttpResponse(resp)
     }
 

@@ -53,7 +53,7 @@ impl Router {
                             .status(StatusCode::INTERNAL_SERVER_ERROR)
                             .header("content-type", "application/json")
                             .body(())
-                            .unwrap();
+                            .expect("static 500 response template is guaranteed valid");
 
                         if let Ok(_) = stream.send_response(resp).await {
                             let _ = stream.send_data(Bytes::from(r#"{"error":"Internal Server Error"}"#)).await;
@@ -72,7 +72,7 @@ impl Router {
             .status(StatusCode::NOT_FOUND)
             .header("content-type", "application/json")
             .body(())
-            .unwrap();
+            .expect("static 404 response template is guaranteed valid");
 
         if let Ok(_) = stream.send_response(resp).await {
             let _ = stream.send_data(Bytes::from(r#"{"error":"Not Found"}"#)).await;

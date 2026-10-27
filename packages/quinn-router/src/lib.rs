@@ -5,6 +5,7 @@ pub mod internal;
 pub mod router;
 
 // Re-export public API cleanly
+pub use handlers::upload::{S3Uri, TableName, UploadMetadata};
 pub use internal::{
     app::App,
     config::{HttpServiceFactory, ServiceConfig},

@@ -2,6 +2,7 @@ use actix_router::ResourceDef;
 use crate::internal::config::{HttpServiceFactory, ServiceConfig};
 
 /// Scope isolates path prefixes without ripple effects (e.g. "/api/v0")
+#[must_use = "a Scope does nothing unless mounted into an App or parent Scope via .service()"]
 pub struct Scope {
     config: ServiceConfig,
 }
@@ -14,6 +15,7 @@ impl Scope {
         }
     }
 
+    #[must_use]
     pub fn configure<F>(mut self, f: F) -> Self
     where
         F: FnOnce(&mut ServiceConfig),
@@ -22,6 +24,7 @@ impl Scope {
         self
     }
 
+    #[must_use]
     pub fn service<S>(mut self, service: S) -> Self
     where
         S: HttpServiceFactory,
@@ -45,6 +48,7 @@ impl HttpServiceFactory for Scope {
 pub mod web {
     use super::*;
 
+    #[must_use = "a Scope does nothing unless mounted into an App or parent Scope via .service()"]
     pub fn scope(prefix: &str) -> Scope {
         Scope::new(prefix)
     }

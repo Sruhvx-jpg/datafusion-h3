@@ -4,6 +4,7 @@ use serde::Serialize;
 use crate::internal::response::{HttpResponse, IntoHttpResponse};
 
 /// Standardized API error matching industry production patterns
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize)]
 pub struct ApiError {
     #[serde(skip)]
@@ -20,6 +21,7 @@ impl std::fmt::Display for ApiError {
 impl std::error::Error for ApiError {}
 
 impl ApiError {
+    #[must_use = "constructing an error does nothing unless returned or converted into a response"]
     pub fn new(status: StatusCode, message: impl Into<String>) -> Self {
         Self {
             status,
@@ -27,26 +29,32 @@ impl ApiError {
         }
     }
 
+    #[must_use = "constructing an error does nothing unless returned or converted into a response"]
     pub fn bad_request(message: impl Into<String>) -> Self {
         Self::new(StatusCode::BAD_REQUEST, message)
     }
 
+    #[must_use = "constructing an error does nothing unless returned or converted into a response"]
     pub fn unauthorized(message: impl Into<String>) -> Self {
         Self::new(StatusCode::UNAUTHORIZED, message)
     }
 
+    #[must_use = "constructing an error does nothing unless returned or converted into a response"]
     pub fn forbidden(message: impl Into<String>) -> Self {
         Self::new(StatusCode::FORBIDDEN, message)
     }
 
+    #[must_use = "constructing an error does nothing unless returned or converted into a response"]
     pub fn not_found(message: impl Into<String>) -> Self {
         Self::new(StatusCode::NOT_FOUND, message)
     }
 
+    #[must_use = "constructing an error does nothing unless returned or converted into a response"]
     pub fn unsupported_media_type(message: impl Into<String>) -> Self {
         Self::new(StatusCode::UNSUPPORTED_MEDIA_TYPE, message)
     }
 
+    #[must_use = "constructing an error does nothing unless returned or converted into a response"]
     pub fn internal(message: impl Into<String>) -> Self {
         Self::new(StatusCode::INTERNAL_SERVER_ERROR, message)
     }

@@ -4,6 +4,7 @@ use crate::internal::config::{HttpServiceFactory, ServiceConfig};
 use crate::internal::service::Router;
 
 /// Top-level Application Builder (Identical to actix_web::App)
+#[must_use = "an App does nothing until finished into a Router via .finish()"]
 pub struct App {
     config: ServiceConfig,
 }
@@ -21,6 +22,7 @@ impl App {
         }
     }
 
+    #[must_use]
     pub fn configure<F>(mut self, f: F) -> Self
     where
         F: FnOnce(&mut ServiceConfig),
@@ -29,6 +31,7 @@ impl App {
         self
     }
 
+    #[must_use]
     pub fn service<S>(mut self, service: S) -> Self
     where
         S: HttpServiceFactory,
