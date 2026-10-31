@@ -1,7 +1,7 @@
-use std::net::SocketAddr;
 use quinn::Endpoint;
 use quinn_router::api_v0;
-use server_conf::{create_server_config, ServerEnv};
+use server_conf::{ServerEnv, create_server_config};
+use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -10,8 +10,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_writer(non_blocking_writer)
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
@@ -36,7 +35,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(err) => {
                     match &err {
                         quinn::ConnectionError::ApplicationClosed(app) => {
-                            tracing::warn!("QUIC ApplicationClosed: code=0x{:x} ({}), reason={:?}", app.error_code.into_inner(), app.error_code, app.reason);
+                            tracing::warn!(
+                                "QUIC ApplicationClosed: code=0x{:x} ({}), reason={:?}",
+                                app.error_code.into_inner(),
+                                app.error_code,
+                                app.reason
+                            );
                         }
                         _ => {
                             tracing::warn!("QUIC handshake failed: {err:?}");
@@ -71,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     };
 
                     tracing::info!(method = %req.method(), path = %req.uri().path(), "Request received");
-                    
+
                     // Dispatch to /api/v0 router
                     router.dispatch(req, stream).await;
                 });

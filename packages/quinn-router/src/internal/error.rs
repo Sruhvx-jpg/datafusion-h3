@@ -1,7 +1,7 @@
+use crate::internal::response::{HttpResponse, IntoHttpResponse};
 use bytes::Bytes;
 use http::{Response, StatusCode};
 use serde::Serialize;
-use crate::internal::response::{HttpResponse, IntoHttpResponse};
 
 /// Standardized API error matching industry production patterns
 #[non_exhaustive]
@@ -61,7 +61,9 @@ impl ApiError {
 }
 
 impl IntoHttpResponse for ApiError {
-    fn into_http_response(self) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>> {
+    fn into_http_response(
+        self,
+    ) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>> {
         let resp = HttpResponse::build(self.status).json(serde_json::json!({
             "error": self.message,
             "status": self.status.as_u16()

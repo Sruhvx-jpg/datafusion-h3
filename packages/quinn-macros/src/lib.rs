@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, ItemFn, LitStr};
+use syn::{ItemFn, LitStr, parse_macro_input};
 
 macro_rules! method_macro {
     ($macro_name:ident, $method_ident:ident) => {

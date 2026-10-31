@@ -82,11 +82,14 @@ fn load_certs(
     // 1. Read Certificate Chain (e.g. mkcert cert.pem or fullchain.pem)
     let cert_file = File::open(cert_path)?;
     let mut cert_reader = BufReader::new(cert_file);
-    let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut cert_reader)
-        .collect::<Result<Vec<_>, _>>()?;
+    let certs: Vec<CertificateDer<'static>> =
+        rustls_pemfile::certs(&mut cert_reader).collect::<Result<Vec<_>, _>>()?;
 
     if certs.is_empty() {
-        return Err(ConfigError::Invalid(format!("No certificates found in '{}'", cert_path)));
+        return Err(ConfigError::Invalid(format!(
+            "No certificates found in '{}'",
+            cert_path
+        )));
     }
 
     // 2. Read Private Key (supports PKCS8, PKCS1 RSA, and SEC1 ECC)

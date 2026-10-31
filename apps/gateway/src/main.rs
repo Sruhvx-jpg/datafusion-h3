@@ -1,7 +1,7 @@
-use std::net::SocketAddr;
 use lb::{BackendTarget, LoadBalancer};
 use quinn::Endpoint;
-use server_conf::{create_server_config, ServerEnv};
+use server_conf::{ServerEnv, create_server_config};
+use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -10,8 +10,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_writer(non_blocking_writer)
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
@@ -23,12 +22,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let endpoint = Endpoint::server(server_config, gateway_addr)?;
 
     // 3. Initialize Load Balancer targeting the backends
-    let lb = LoadBalancer::new(vec![
-        BackendTarget::new(
-            "quinn",
-            format!("{}:{}", env.host, env.port).parse()?, // 127.0.0.1:4433
-        ),
-    ]);
+    let lb = LoadBalancer::new(vec![BackendTarget::new(
+        "quinn",
+        format!("{}:{}", env.host, env.port).parse()?, // 127.0.0.1:4433
+    )]);
 
     tracing::info!(target: "gateway", "🌐 [Gateway LB] Listening on UDP https://{}", gateway_addr);
 
@@ -42,7 +39,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(err) => {
                     match &err {
                         quinn::ConnectionError::ApplicationClosed(app) => {
-                            tracing::warn!("Gateway ApplicationClosed: code=0x{:x} ({}), reason={:?}", app.error_code.into_inner(), app.error_code, app.reason);
+                            tracing::warn!(
+                                "Gateway ApplicationClosed: code=0x{:x} ({}), reason={:?}",
+                                app.error_code.into_inner(),
+                                app.error_code,
+                                app.reason
+                            );
                         }
                         _ => {
                             tracing::warn!("Client QUIC handshake failed: {err:?}");

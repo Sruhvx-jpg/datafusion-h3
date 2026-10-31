@@ -1,9 +1,9 @@
-use std::net::SocketAddr;
-use std::sync::Arc;
 use bytes::Buf;
 use http::Request;
-use quinn::crypto::rustls::QuicClientConfig;
 use quinn::Endpoint;
+use quinn::crypto::rustls::QuicClientConfig;
+use std::net::SocketAddr;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -42,9 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let uri = format!("https://localhost:{}{}", port, path);
     println!("Sending {} {}...", method, uri);
 
-    let mut req_builder = Request::builder()
-        .method(method)
-        .uri(&uri);
+    let mut req_builder = Request::builder().method(method).uri(&uri);
 
     let body_bytes = if method == "PUT" || method == "POST" {
         req_builder = req_builder.header("content-type", "text/csv");
@@ -63,7 +61,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !body_bytes.is_empty() {
         // Stream in chunks
         for chunk in body_bytes.chunks(1024 * 64) {
-            stream.send_data(bytes::Bytes::copy_from_slice(chunk)).await?;
+            stream
+                .send_data(bytes::Bytes::copy_from_slice(chunk))
+                .await?;
         }
     }
     stream.finish().await?;

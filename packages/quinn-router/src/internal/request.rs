@@ -1,9 +1,9 @@
+use crate::internal::error::ApiError;
+use crate::internal::types::H3Stream;
 use bytes::{Buf, Bytes, BytesMut};
 use http::{HeaderMap, Method, Request, Uri};
 use serde::de::DeserializeOwned;
 use validator::Validate;
-use crate::internal::error::ApiError;
-use crate::internal::types::H3Stream;
 
 /// HTTP request wrapper giving Express-style `req.json::<DTO>()` ergonomics
 pub struct HttpRequest {
@@ -77,14 +77,12 @@ impl HttpRequest {
         T: DeserializeOwned + Validate,
     {
         let raw_bytes = self.read_body().await?;
-        let dto: T = serde_json::from_slice(&raw_bytes).map_err(|e| {
-            ApiError::bad_request(format!("Malformed JSON payload: {e}"))
-        })?;
+        let dto: T = serde_json::from_slice(&raw_bytes)
+            .map_err(|e| ApiError::bad_request(format!("Malformed JSON payload: {e}")))?;
 
         // Automatic schema validation (e.g. email, min length, ranges)
-        dto.validate().map_err(|e| {
-            ApiError::bad_request(format!("Validation failed: {e}"))
-        })?;
+        dto.validate()
+            .map_err(|e| ApiError::bad_request(format!("Validation failed: {e}")))?;
 
         Ok(dto)
     }

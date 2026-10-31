@@ -13,7 +13,7 @@ pub use internal::{
     request::HttpRequest,
     response::{HttpResponse, HttpResponseBuilder, IntoHttpResponse},
     route::{HandlerEntry, Route},
-    scope::{web, Scope},
+    scope::{Scope, web},
     service::Router,
     types::{BoxFuture, H3Stream, HandlerFn},
 };

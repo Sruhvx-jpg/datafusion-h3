@@ -1,10 +1,12 @@
 use bytes::Bytes;
-use http::{header, HeaderName, HeaderValue, Response, StatusCode};
+use http::{HeaderName, HeaderValue, Response, StatusCode, header};
 use serde::Serialize;
 
 /// Trait converting any handler output into an HTTP Response
 pub trait IntoHttpResponse {
-    fn into_http_response(self) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>>;
+    fn into_http_response(
+        self,
+    ) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// An HTTP response builder mimicking actix_web::HttpResponseBuilder
@@ -46,7 +48,9 @@ impl HttpResponseBuilder {
         for (k, v) in &self.headers {
             builder = builder.header(k, v);
         }
-        let resp = builder.body(body.into()).expect("static response builder invariants guaranteed valid");
+        let resp = builder
+            .body(body.into())
+            .expect("static response builder invariants guaranteed valid");
         HttpResponse(resp)
     }
 
@@ -67,25 +71,45 @@ impl HttpResponse {
 
     // Static constructors matching Actix-Web
     #[allow(non_snake_case)]
-    pub fn Ok() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::OK) }
+    pub fn Ok() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::OK)
+    }
     #[allow(non_snake_case)]
-    pub fn Created() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::CREATED) }
+    pub fn Created() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::CREATED)
+    }
     #[allow(non_snake_case)]
-    pub fn Accepted() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::ACCEPTED) }
+    pub fn Accepted() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::ACCEPTED)
+    }
     #[allow(non_snake_case)]
-    pub fn NoContent() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::NO_CONTENT) }
+    pub fn NoContent() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::NO_CONTENT)
+    }
     #[allow(non_snake_case)]
-    pub fn BadRequest() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::BAD_REQUEST) }
+    pub fn BadRequest() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::BAD_REQUEST)
+    }
     #[allow(non_snake_case)]
-    pub fn Unauthorized() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::UNAUTHORIZED) }
+    pub fn Unauthorized() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::UNAUTHORIZED)
+    }
     #[allow(non_snake_case)]
-    pub fn Forbidden() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::FORBIDDEN) }
+    pub fn Forbidden() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::FORBIDDEN)
+    }
     #[allow(non_snake_case)]
-    pub fn NotFound() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::NOT_FOUND) }
+    pub fn NotFound() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::NOT_FOUND)
+    }
     #[allow(non_snake_case)]
-    pub fn UnsupportedMediaType() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::UNSUPPORTED_MEDIA_TYPE) }
+    pub fn UnsupportedMediaType() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::UNSUPPORTED_MEDIA_TYPE)
+    }
     #[allow(non_snake_case)]
-    pub fn InternalServerError() -> HttpResponseBuilder { HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR) }
+    pub fn InternalServerError() -> HttpResponseBuilder {
+        HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR)
+    }
 
     pub fn into_inner(self) -> Response<Bytes> {
         self.0
@@ -93,13 +117,17 @@ impl HttpResponse {
 }
 
 impl IntoHttpResponse for HttpResponse {
-    fn into_http_response(self) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>> {
+    fn into_http_response(
+        self,
+    ) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(self.0)
     }
 }
 
 impl IntoHttpResponse for Response<Bytes> {
-    fn into_http_response(self) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>> {
+    fn into_http_response(
+        self,
+    ) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(self)
     }
 }
@@ -109,7 +137,9 @@ where
     T: IntoHttpResponse,
     E: std::error::Error + Send + Sync + 'static,
 {
-    fn into_http_response(self) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>> {
+    fn into_http_response(
+        self,
+    ) -> Result<Response<Bytes>, Box<dyn std::error::Error + Send + Sync>> {
         match self {
             Ok(v) => v.into_http_response(),
             Err(e) => Err(Box::new(e)),

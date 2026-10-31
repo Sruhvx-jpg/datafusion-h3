@@ -1,11 +1,11 @@
-use std::future::Future;
-use std::sync::Arc;
-use actix_router::ResourceDef;
-use http::Method;
 use crate::internal::config::{HttpServiceFactory, ServiceConfig};
 use crate::internal::request::HttpRequest;
 use crate::internal::response::IntoHttpResponse;
 use crate::internal::types::HandlerFn;
+use actix_router::ResourceDef;
+use http::Method;
+use std::future::Future;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct HandlerEntry {

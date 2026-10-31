@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use http::Request;
 use quinn_router::H3Stream;
@@ -29,7 +29,10 @@ pub struct LoadBalancer {
 
 impl LoadBalancer {
     pub fn new(backends: Vec<BackendTarget>) -> Self {
-        assert!(!backends.is_empty(), "Load balancer requires at least 1 backend target");
+        assert!(
+            !backends.is_empty(),
+            "Load balancer requires at least 1 backend target"
+        );
         Self {
             backends: backends.into(),
             counter: Arc::new(AtomicUsize::new(0)),

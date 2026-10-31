@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use actix_router::Router as ActixRouter;
 use crate::internal::config::{HttpServiceFactory, ServiceConfig};
 use crate::internal::service::Router;
+use actix_router::Router as ActixRouter;
+use std::sync::Arc;
 
 /// Top-level Application Builder (Identical to actix_web::App)
 #[must_use = "an App does nothing until finished into a Router via .finish()"]
@@ -22,7 +22,6 @@ impl App {
         }
     }
 
-    #[must_use]
     pub fn configure<F>(mut self, f: F) -> Self
     where
         F: FnOnce(&mut ServiceConfig),
@@ -31,7 +30,6 @@ impl App {
         self
     }
 
-    #[must_use]
     pub fn service<S>(mut self, service: S) -> Self
     where
         S: HttpServiceFactory,

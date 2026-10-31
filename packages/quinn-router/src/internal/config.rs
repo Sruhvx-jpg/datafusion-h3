@@ -1,7 +1,7 @@
-use actix_router::ResourceDef;
-use http::Method;
 use crate::internal::route::HandlerEntry;
 use crate::internal::types::HandlerFn;
+use actix_router::ResourceDef;
+use http::Method;
 
 /// The core trait for pluggable services and scopes
 pub trait HttpServiceFactory {
@@ -36,7 +36,13 @@ impl ServiceConfig {
             format!("{}/{}", self.prefix.trim_end_matches('/'), subpath)
         };
         let rdef = ResourceDef::new(full_pattern);
-        self.routes.push((rdef, HandlerEntry { method, func: handler }));
+        self.routes.push((
+            rdef,
+            HandlerEntry {
+                method,
+                func: handler,
+            },
+        ));
     }
 
     /// Plugs in a sub-configuration function without ripple effects
