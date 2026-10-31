@@ -1,12 +1,11 @@
-use http::{header, StatusCode};
+use http::{StatusCode, header};
+use object_store::ObjectStore;
 use object_store::aws::AmazonS3Builder;
 use object_store::buffered::BufWriter;
 use object_store::path::Path as ObjectPath;
-use object_store::ObjectStore;
 use quinn_macros::put;
 use quinn_router::{ApiError, HttpRequest, HttpResponse};
 use serde::Serialize;
-use std::collections::HashSet;
 use std::sync::{Arc, OnceLock};
 use tokio::io::AsyncWriteExt;
 
@@ -17,12 +16,11 @@ fn get_s3_store() -> Option<Arc<dyn ObjectStore>> {
         .get_or_init(|| {
             let endpoint = std::env::var("S3_ENDPOINT")
                 .unwrap_or_else(|_| "http://127.0.0.1:9000".to_string());
-            let bucket = std::env::var("S3_BUCKET")
-                .unwrap_or_else(|_| "service4agent".to_string());
-            let access_key = std::env::var("AWS_ACCESS_KEY_ID")
-                .unwrap_or_else(|_| "minioadmin".to_string());
-            let secret_key = std::env::var("AWS_SECRET_ACCESS_KEY")
-                .unwrap_or_else(|_| "minioadmin".to_string());
+            let bucket = std::env::var("S3_BUCKET").unwrap_or_else(|_| "service4agent".to_string());
+            let access_key =
+                std::env::var("AWS_ACCESS_KEY_ID").unwrap_or_else(|_| "minioadmin".to_string());
+            let secret_key =
+                std::env::var("AWS_SECRET_ACCESS_KEY").unwrap_or_else(|_| "minioadmin".to_string());
 
             AmazonS3Builder::new()
                 .with_endpoint(endpoint)
@@ -107,7 +105,6 @@ pub struct UploadMetadata {
     pub file_path: S3Uri,
     pub total_bytes: u64,
     pub total_chunks: usize,
-    pub duplicate_chunks: usize,
     pub blake3_hash: String,
     pub storage: String,
 }
@@ -148,10 +145,12 @@ pub async fn upload_table(req: &mut HttpRequest) -> HttpResponse {
                 }));
             }
         } else {
-            return HttpResponse::build(StatusCode::UNSUPPORTED_MEDIA_TYPE).json(serde_json::json!({
-                "error": "Invalid Content-Type header encoding",
-                "status": 415
-            }));
+            return HttpResponse::build(StatusCode::UNSUPPORTED_MEDIA_TYPE).json(
+                serde_json::json!({
+                    "error": "Invalid Content-Type header encoding",
+                    "status": 415
+                }),
+            );
         }
     }
 
@@ -182,8 +181,6 @@ pub async fn upload_table(req: &mut HttpRequest) -> HttpResponse {
     let mut running_hasher = blake3::Hasher::new();
     let mut total_bytes: u64 = 0;
     let mut total_chunks: usize = 0;
-    let mut duplicate_chunks: usize = 0;
-    let mut seen_chunks: HashSet<[u8; 32]> = HashSet::new();
 
     const MAX_UPLOAD_SIZE: u64 = 10 * 1024 * 1024 * 1024; // 10 GiB
 
@@ -219,11 +216,6 @@ pub async fn upload_table(req: &mut HttpRequest) -> HttpResponse {
         total_chunks += 1;
         running_hasher.update(&chunk);
 
-        let chunk_hash: [u8; 32] = *blake3::hash(&chunk).as_bytes();
-        if !seen_chunks.insert(chunk_hash) {
-            duplicate_chunks += 1;
-        }
-
         // Pipe chunk directly to battle-tested S3 writer (AsyncWrite)
         if let Err(e) = writer.write_all(&chunk).await {
             tracing::error!("S3 write error: {e}");
@@ -253,7 +245,6 @@ pub async fn upload_table(req: &mut HttpRequest) -> HttpResponse {
         file_path,
         total_bytes,
         total_chunks,
-        duplicate_chunks,
         blake3_hash,
         storage: "s3".to_string(),
     };
