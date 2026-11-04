@@ -45,10 +45,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut req_builder = Request::builder().method(method).uri(&uri);
 
     let body_bytes = if method == "PUT" || method == "POST" {
-        req_builder = req_builder.header("content-type", "text/csv");
-        if let Some(filepath) = payload_file {
-            tokio::fs::read(filepath).await?
+        if let Some(payload_arg) = payload_file {
+            if payload_arg.trim_start().starts_with('{') {
+                req_builder = req_builder.header("content-type", "application/json");
+                payload_arg.as_bytes().to_vec()
+            } else if payload_arg.ends_with(".json") {
+                req_builder = req_builder.header("content-type", "application/json");
+                tokio::fs::read(payload_arg).await?
+            } else {
+                req_builder = req_builder.header("content-type", "text/csv");
+                tokio::fs::read(payload_arg).await?
+            }
         } else {
+            req_builder = req_builder.header("content-type", "text/csv");
             b"id,name,value\n1,alpha,10.5\n2,beta,20.0\n3,gamma,30.5\n".to_vec()
         }
     } else {

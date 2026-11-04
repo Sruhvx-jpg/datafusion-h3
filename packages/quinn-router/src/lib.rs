@@ -1,8 +1,10 @@
 extern crate self as quinn_router;
 
+pub mod data_ops;
 pub mod handlers;
 pub mod internal;
 pub mod router;
+pub mod services;
 
 // Re-export public API cleanly
 pub use handlers::upload::{S3Uri, TableName, UploadMetadata};

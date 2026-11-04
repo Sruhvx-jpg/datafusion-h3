@@ -7,13 +7,18 @@ edition = "2024"
 actix-router = "0.5"
 blake3 = "1.8"
 bytes = "1"
+datafusion = "44"
 h3 = "0.0.8"
 h3-quinn = "0.0.10"
 http = "1"
+libsql = "0.10"
 object_store = { version = "0.11", features = ["aws"] }
 quinn-macros = { path = "../quinn-macros" }
+redis = { version = "0.27", default-features = false, features = ["tokio-rustls-comp"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tracing = "0.1"
+url = "2"
 validator = { version = "0.19", features = ["derive"] }
 tokio = { version = "1.54", features = ["fs", "io-util", "rt"] }
+
