@@ -1,4 +1,4 @@
-# Service4Agent (DataFusion-H3)
+# Dipeline (DataFusion-H3)
 
 > High-throughput, low-latency analytical microservice for AI agents, built natively on **HTTP/3 (QUIC)**, **Apache DataFusion**, and **Actix-Web's modular routing architecture**.
 
@@ -62,7 +62,7 @@ This codebase strictly implements and cross-references governing IETF RFC specif
 ## 3. Workspace Layout & Package Topology
 
 ```
-datafusion-h3/
+dipeline/
 ├── Cargo.toml                  <-- Root Cargo Workspace manifest
 ├── .env                        <-- Fail-fast environment configuration
 ├── .env.example                <-- Production environment template
